@@ -11,24 +11,39 @@ function Feed(props) {
 	const [posts, setPosts] = useState([])
 
 	useEffect(() => {
-		let posts = []
-		if (props.usersLoaded == props.following.length) {
-			for (let i = 0; i < props.following.length; i++) {
-				const user = props.users.find(
-					(el) => el.uid === props.following[i]
-				)
-				if (user != undefined) {
-					posts = [...posts, ...user.posts]
-				}
-			}
-
-			posts.sort(function (x, y) {
+		console.log('props', props.feed)
+		if (
+			props.usersFollowingLoaded == props?.following?.length &&
+			props?.following?.length !== 0
+		) {
+			props.feed?.sort(function (x, y) {
 				return x.creation - y.creation
 			})
+			setPosts(props.feed)
+		} 
+	}, [props.usersFollowingLoaded, props.feed])
 
-			setPosts(posts)
-		}
-	}, [props.usersLoaded])
+	const onLikePress = (userId, postId) => {
+		Firebase.firestore()
+			.collection('posts')
+			.doc(userId)
+			.collection('userPosts')
+			.doc(postId)
+			.collection('likes')
+			.doc(auth.currentUser.uid)
+			.set({})
+	}
+
+	const onDislikePress = (userId, postId) => {
+		Firebase.firestore()
+			.collection('posts')
+			.doc(userId)
+			.collection('userPosts')
+			.doc(postId)
+			.collection('likes')
+			.doc(auth.currentUser.uid)
+			.delete({})
+	}
 
 	return (
 		<View style={styles.container}>
@@ -46,6 +61,21 @@ function Feed(props) {
 								style={styles.image}
 								source={{ uri: item.downloadURL }}
 							/>
+							{item.currentUserLike ? (
+								<Button
+									title="Dislike"
+									onPress={() =>
+										onDislikePress(item.user.uid, item.id)
+									}
+								/>
+							) : (
+								<Button
+									title="Like"
+									onPress={() =>
+										onLikePress(item.user.uid, item.id)
+									}
+								/>
+							)}
 							<Text
 								onPress={() =>
 									props.navigation.navigate('Comment', {
@@ -85,8 +115,8 @@ const styles = StyleSheet.create({
 const mapStateToProps = (store) => ({
 	currentUser: store.userState.currentUser,
 	following: store.userState.following,
-	users: store.usersState.users,
-	usersLoaded: store.userState.usersLoaded
+	feed: store.usersState.feed,
+	usersFollowingLoaded: store.userState.usersFollowingLoaded
 })
 
 export default connect(mapStateToProps, null)(Feed)
